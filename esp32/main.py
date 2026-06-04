@@ -21,7 +21,7 @@ LAT = 39.9042
 LNG = 116.4074
 
 # 上传地址 (修改为你的后台 URL)
-UPLOAD_URL = "http://124.222.115.199:8080/api/data"
+UPLOAD_URL = "https://qichenlab.site/iot/api/data"
 UPLOAD_INTERVAL = 300  # 5 分钟
 
 AHT20_ADDR = 0x38

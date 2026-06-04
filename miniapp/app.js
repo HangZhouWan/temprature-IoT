@@ -1,6 +1,6 @@
 App({
   globalData: {
     // 改为你的后台地址（开发时可在微信开发者工具勾选"不校验域名"）
-    apiBase: "http://124.222.115.199:8080"
+    apiBase: "https://qichenlab.site/iot"
   }
 });
