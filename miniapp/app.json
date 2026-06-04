@@ -1,0 +1,33 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/devices/devices"
+  ],
+  "window": {
+    "navigationBarTitleText": "IoT 传感器",
+    "navigationBarBackgroundColor": "#1e293b",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0f172a"
+  },
+  "tabBar": {
+    "color": "#94a3b8",
+    "selectedColor": "#60a5fa",
+    "backgroundColor": "#1e293b",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "数据面板",
+        "iconPath": "images/dashboard.png",
+        "selectedIconPath": "images/dashboard-active.png"
+      },
+      {
+        "pagePath": "pages/devices/devices",
+        "text": "设备监控",
+        "iconPath": "images/devices.png",
+        "selectedIconPath": "images/devices-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

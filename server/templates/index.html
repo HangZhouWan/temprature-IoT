@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT 传感器数据面板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 24px; margin-bottom: 20px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: #1e293b; border-radius: 12px; padding: 20px; }
+  .card .label { font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+  .card .value { font-size: 32px; font-weight: 700; }
+  .card .unit { font-size: 16px; font-weight: 400; color: #94a3b8; }
+  .chart-box { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+  .chart-box h3 { margin-bottom: 12px; font-size: 16px; color: #94a3b8; }
+  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  select, button { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #334155; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid #334155; font-size: 14px; }
+  th { color: #94a3b8; font-weight: 500; }
+  .badge { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 6px; }
+  .refresh { color: #94a3b8; font-size: 12px; margin-left: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>IoT 传感器数据面板 <span class="refresh" id="refresh"></span></h1>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">温度</div>
+      <div class="value" id="temp">--<span class="unit">°C</span></div>
+    </div>
+    <div class="card">
+      <div class="label">湿度</div>
+      <div class="value" id="hum">--<span class="unit">%</span></div>
+    </div>
+    <div class="card">
+      <div class="label">在线设备</div>
+      <div class="value" id="devices">--</div>
+    </div>
+    <div class="card">
+      <div class="label">最新上报</div>
+      <div class="value" id="lastTime" style="font-size:18px">--</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label>设备:</label>
+    <select id="deviceSelect">
+      <option value="">全部设备</option>
+    </select>
+    <label>时间:</label>
+    <select id="hoursSelect">
+      <option value="1">最近 1 小时</option>
+      <option value="6">最近 6 小时</option>
+      <option value="24" selected>最近 24 小时</option>
+      <option value="72">最近 3 天</option>
+      <option value="168">最近 7 天</option>
+    </select>
+    <button onclick="loadAll()">刷新</button>
+  </div>
+
+  <div class="chart-box">
+    <h3>温度 °C</h3>
+    <canvas id="tempChart" height="80"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>湿度 %</h3>
+    <canvas id="humChart" height="80"></canvas>
+  </div>
+
+  <div class="chart-box">
+    <h3>最近 20 条记录</h3>
+    <table><thead><tr><th>时间</th><th>设备</th><th>温度</th><th>湿度</th></tr></thead>
+    <tbody id="recentTable"></tbody></table>
+  </div>
+</div>
+
+<script>
+  let tempChart, humChart;
+
+  async function loadAll() {
+    const device = document.getElementById("deviceSelect").value;
+    const hours = document.getElementById("hoursSelect").value;
+    const params = new URLSearchParams({ hours });
+    if (device) params.set("device", device);
+
+    // 最新读数
+    const latestResp = await fetch("/api/latest");
+    const latestData = await latestResp.json();
+    if (latestData.length > 0) {
+      const d = latestData.find(r => device ? r.device_id === device : true) || latestData[0];
+      document.getElementById("temp").innerHTML = (d.temp != null ? d.temp.toFixed(1) : "--") + '<span class="unit">°C</span>';
+      document.getElementById("hum").innerHTML = (d.hum != null ? d.hum.toFixed(1) : "--") + '<span class="unit">%</span>';
+      document.getElementById("lastTime").textContent = d.created_at || "--";
+    }
+
+    // 设备列表
+    const devResp = await fetch("/api/devices");
+    const devData = await devResp.json();
+    document.getElementById("devices").textContent = devData.length;
+    const sel = document.getElementById("deviceSelect");
+    if (sel.options.length <= 1) {
+      devData.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.device_id;
+        opt.textContent = d.device_id;
+        sel.appendChild(opt);
+      });
+    }
+
+    // 历史数据
+    const histResp = await fetch("/api/history?" + params);
+    const histData = await histResp.json();
+    const labels = histData.map(r => r.created_at);
+    const temps = histData.map(r => r.temp);
+    const hums = histData.map(r => r.hum);
+
+    if (tempChart) tempChart.destroy();
+    if (humChart) humChart.destroy();
+
+    const opt = (label, color) => ({
+      type: "line", data: { labels, datasets: [{ label, data: temps.map(() => null), borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.3 }] },
+      options: { responsive: true, scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 10 } }, y: { ticks: { color: "#94a3b8" } } }, plugins: { legend: { display: false } } }
+    });
+
+    tempChart = new Chart(document.getElementById("tempChart").getContext("2d"),
+      { ...opt("温度", "#f87171"), data: { labels, datasets: [{ label: "温度", data: temps, borderColor: "#f87171", borderWidth: 2, pointRadius: 0, tension: 0.3 }] } });
+
+    humChart = new Chart(document.getElementById("humChart").getContext("2d"),
+      { ...opt("湿度", "#60a5fa"), data: { labels, datasets: [{ label: "湿度", data: hums, borderColor: "#60a5fa", borderWidth: 2, pointRadius: 0, tension: 0.3 }] } });
+
+    // 最近记录
+    const tbody = document.getElementById("recentTable");
+    tbody.innerHTML = histData.slice(-20).reverse().map(r =>
+      `<tr><td>${r.created_at}</td><td><span class="badge"></span>${r.device_id}</td><td>${r.temp?.toFixed(1) ?? "--"}°C</td><td>${r.hum?.toFixed(1) ?? "--"}%</td></tr>`
+    ).join("");
+
+    document.getElementById("refresh").textContent = "已更新 " + new Date().toLocaleTimeString();
+  }
+
+  document.getElementById("deviceSelect").addEventListener("change", loadAll);
+  document.getElementById("hoursSelect").addEventListener("change", loadAll);
+  loadAll();
+  setInterval(loadAll, 60000);
+</script>
+</body>
+</html>

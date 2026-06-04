@@ -1,0 +1,64 @@
+<view class="container">
+  <!-- 标题 -->
+  <view class="header">
+    <text class="title">IoT 传感器面板</text>
+    <text class="refresh-tip">已更新 {{updateTime}}</text>
+  </view>
+
+  <!-- 数据卡片 -->
+  <view class="cards">
+    <view class="card temp-card">
+      <text class="card-label">温度</text>
+      <view class="card-value">{{temp}}<text class="card-unit">°C</text></view>
+      <text class="card-sub">当前室温</text>
+    </view>
+    <view class="card hum-card">
+      <text class="card-label">湿度</text>
+      <view class="card-value">{{hum}}<text class="card-unit">%</text></view>
+      <text class="card-sub">相对湿度</text>
+    </view>
+    <view class="card">
+      <text class="card-label">在线设备</text>
+      <view class="card-value">{{deviceCount}}</view>
+      <text class="card-sub">台正在上报</text>
+    </view>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="controls">
+    <picker mode="selector" range="{{deviceList}}" range-key="name" bindchange="onDeviceChange">
+      <view class="picker">{{currentDevice || '全部设备'}}</view>
+    </picker>
+    <picker mode="selector" range="{{hourOptions}}" bindchange="onHoursChange">
+      <view class="picker">{{currentHours}}h</view>
+    </picker>
+    <button class="btn" bindtap="loadData">刷新</button>
+  </view>
+
+  <!-- 图表 -->
+  <view class="chart-box">
+    <text class="chart-title">温湿度曲线</text>
+    <canvas type="2d" id="chartCanvas" class="chart"></canvas>
+    <view class="legend">
+      <view class="legend-item"><view class="dot temp-dot"></view> 温度 °C</view>
+      <view class="legend-item"><view class="dot hum-dot"></view> 湿度 %</view>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="table-box">
+    <text class="chart-title">最近记录</text>
+    <view class="table-header">
+      <text class="col col-wide">时间</text>
+      <text class="col">温度</text>
+      <text class="col">湿度</text>
+    </view>
+    <scroll-view scroll-y class="table-body">
+      <view class="table-row" wx:for="{{recentData}}" wx:key="index">
+        <text class="col col-wide">{{item.created_at}}</text>
+        <text class="col">{{item.temp}}°C</text>
+        <text class="col">{{item.hum}}%</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

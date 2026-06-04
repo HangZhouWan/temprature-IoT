@@ -1,0 +1,10 @@
+[project]
+name = "hardware-esp32"
+version = "0.1.0"
+description = "ESP32 MicroPython 项目"
+
+[tool.esp32]
+port = "/dev/cu.usbserial-0001"
+baud = 115200
+chip = "esp32"
+flash_size = "4MB"

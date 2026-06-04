@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 install *)",
+      "Bash(export PATH=\"$HOME/Library/Python/3.9/bin:$PATH\")",
+      "Bash(esptool version *)",
+      "Bash(mpremote version *)",
+      "Bash(esptool.py version *)",
+      "Bash(esptool.py --port /dev/cu.usbserial-0001 flash_id)",
+      "Bash(mpremote connect *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(kill 6117)",
+      "Bash(esptool.py --port /dev/cu.usbserial-0001 erase_flash)"
+    ]
+  }
+}
