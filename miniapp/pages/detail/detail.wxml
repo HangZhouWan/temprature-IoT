@@ -1,0 +1,62 @@
+<view class="container">
+  <!-- 设备信息 -->
+  <view class="header">
+    <!-- 编辑模式 -->
+    <view class="name-edit" wx:if="{{editing}}">
+      <input class="name-input" value="{{editName}}" bindinput="onEditInput" focus auto-focus confirm-type="done" bindconfirm="saveName"/>
+      <view class="name-actions">
+        <text class="name-btn cancel" bindtap="cancelEdit">取消</text>
+        <text class="name-btn save" bindtap="saveName">保存</text>
+      </view>
+    </view>
+    <!-- 显示模式 -->
+    <view class="name-display" wx:else bindtap="startEdit">
+      <text class="device-id">{{displayName}}</text>
+      <text class="edit-hint">点击修改名称</text>
+    </view>
+    <text class="device-id-raw">{{deviceId}}</text>
+    <text class="update-time">最后上报: {{updateTime}}</text>
+  </view>
+
+  <!-- 实时数据 -->
+  <view class="cards">
+    <view class="card temp-card">
+      <text class="card-label">温度</text>
+      <view class="card-value">{{temp}}<text class="card-unit">°C</text></view>
+    </view>
+    <view class="card hum-card">
+      <text class="card-label">湿度</text>
+      <view class="card-value">{{hum}}<text class="card-unit">%</text></view>
+    </view>
+  </view>
+
+  <!-- 图表 -->
+  <view class="chart-box">
+    <text class="chart-title">最近12小时温湿度曲线</text>
+    <canvas type="2d" id="detailChart" class="chart"></canvas>
+    <view class="legend">
+      <view class="legend-item"><view class="dot temp-dot"></view> 温度 °C</view>
+      <view class="legend-item"><view class="dot hum-dot"></view> 湿度 %</view>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="table-box">
+    <text class="chart-title">最近记录</text>
+    <view class="table-header">
+      <text class="col col-wide">时间</text>
+      <text class="col">温度</text>
+      <text class="col">湿度</text>
+    </view>
+    <scroll-view scroll-y class="table-body">
+      <view class="table-row" wx:for="{{history}}" wx:key="id">
+        <text class="col col-wide">{{item.created_at}}</text>
+        <text class="col">{{item.temp != null ? item.temp.toFixed(1) + '°C' : '--'}}</text>
+        <text class="col">{{item.hum != null ? item.hum.toFixed(1) + '%' : '--'}}</text>
+      </view>
+    </scroll-view>
+    <view class="empty" wx:if="{{history.length === 0}}">
+      <text>暂无数据</text>
+    </view>
+  </view>
+</view>

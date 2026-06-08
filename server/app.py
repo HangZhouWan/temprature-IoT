@@ -46,6 +46,26 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_device_time
             ON readings(device_id, created_at DESC)
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS thresholds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                temp_high REAL DEFAULT 50,
+                temp_low REAL DEFAULT -20,
+                hum_high REAL DEFAULT 90,
+                hum_low REAL DEFAULT 10,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # 确保有一条默认记录
+        conn.execute("""
+            INSERT OR IGNORE INTO thresholds (id) VALUES (1)
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS device_names (
+                device_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+        """)
 
 
 # ---------- API ----------
@@ -117,15 +137,73 @@ def devices():
     return jsonify([dict(r) for r in rows])
 
 
+def _get_thresholds():
+    """读取阈值配置，无记录时返回默认值"""
+    db = get_db()
+    row = db.execute("SELECT * FROM thresholds WHERE id = 1").fetchone()
+    if row:
+        return dict(row)
+    return {"temp_high": 50, "temp_low": -20, "hum_high": 90, "hum_low": 10}
+
+
+@app.route("/api/thresholds", methods=["GET", "POST"])
+def thresholds():
+    """获取或更新预警阈值"""
+    db = get_db()
+    if request.method == "GET":
+        return jsonify(_get_thresholds())
+
+    data = request.get_json(force=True)
+    fields = {}
+    for k in ("temp_high", "temp_low", "hum_high", "hum_low"):
+        if k in data:
+            fields[k] = data[k]
+    if fields:
+        sets = ", ".join(f"{k} = ?" for k in fields)
+        vals = list(fields.values()) + [1]
+        db.execute(
+            f"UPDATE thresholds SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            vals,
+        )
+        db.commit()
+    return jsonify(_get_thresholds())
+
+
+@app.route("/api/device-names")
+def device_names():
+    """获取所有设备自定义名称"""
+    db = get_db()
+    rows = db.execute("SELECT device_id, name FROM device_names").fetchall()
+    return jsonify({r["device_id"]: r["name"] for r in rows})
+
+
+@app.route("/api/device-name", methods=["POST"])
+def set_device_name():
+    """设置单个设备名称"""
+    data = request.get_json(force=True)
+    device_id = data.get("device_id", "").strip()
+    name = data.get("name", "").strip()
+    if not device_id or not name:
+        return jsonify({"ok": False, "error": "device_id and name required"}), 400
+    db = get_db()
+    db.execute(
+        "INSERT OR REPLACE INTO device_names (device_id, name) VALUES (?, ?)",
+        (device_id, name),
+    )
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/devices/status")
 def devices_status():
     """设备状态列表（含在线/离线/异常判定）"""
-    timeout = int(request.args.get("timeout", 10))  # 超时分钟数
+    timeout = int(request.args.get("timeout", 10))
     cutoff = datetime.now() - timedelta(minutes=timeout)
+    th = _get_thresholds()
     db = get_db()
 
     rows = db.execute("""
-        SELECT r.device_id, r.temp, r.hum,
+        SELECT r.device_id, r.temp, r.hum, r.lat, r.lng,
                r.created_at AS last_seen,
                (SELECT COUNT(*) FROM readings WHERE device_id = r.device_id) AS total
         FROM readings r
@@ -141,9 +219,9 @@ def devices_status():
         last = datetime.strptime(d["last_seen"], "%Y-%m-%d %H:%M:%S")
         if last < cutoff:
             d["status"] = "offline"
-        elif d["temp"] is not None and (d["temp"] > 50 or d["temp"] < -20):
+        elif d["temp"] is not None and (d["temp"] > th["temp_high"] or d["temp"] < th["temp_low"]):
             d["status"] = "warning"
-        elif d["hum"] is not None and (d["hum"] > 90 or d["hum"] < 10):
+        elif d["hum"] is not None and (d["hum"] > th["hum_high"] or d["hum"] < th["hum_low"]):
             d["status"] = "warning"
         else:
             d["status"] = "online"

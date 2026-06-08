@@ -1,64 +1,91 @@
 <view class="container">
-  <!-- 标题 -->
+  <!-- 标题栏 -->
   <view class="header">
-    <text class="title">IoT 传感器面板</text>
-    <text class="refresh-tip">已更新 {{updateTime}}</text>
-  </view>
-
-  <!-- 数据卡片 -->
-  <view class="cards">
-    <view class="card temp-card">
-      <text class="card-label">温度</text>
-      <view class="card-value">{{temp}}<text class="card-unit">°C</text></view>
-      <text class="card-sub">当前室温</text>
-    </view>
-    <view class="card hum-card">
-      <text class="card-label">湿度</text>
-      <view class="card-value">{{hum}}<text class="card-unit">%</text></view>
-      <text class="card-sub">相对湿度</text>
-    </view>
-    <view class="card">
-      <text class="card-label">在线设备</text>
-      <view class="card-value">{{deviceCount}}</view>
-      <text class="card-sub">台正在上报</text>
+    <text class="title">状态告警</text>
+    <view class="settings-btn" bindtap="goSettings">
+      <text>阈值</text>
     </view>
   </view>
 
-  <!-- 筛选 -->
-  <view class="controls">
-    <picker mode="selector" range="{{deviceList}}" range-key="name" bindchange="onDeviceChange">
-      <view class="picker">{{currentDevice || '全部设备'}}</view>
-    </picker>
-    <picker mode="selector" range="{{hourOptions}}" bindchange="onHoursChange">
-      <view class="picker">{{currentHours}}h</view>
-    </picker>
-    <button class="btn" bindtap="loadData">刷新</button>
-  </view>
-
-  <!-- 图表 -->
-  <view class="chart-box">
-    <text class="chart-title">温湿度曲线</text>
-    <canvas type="2d" id="chartCanvas" class="chart"></canvas>
-    <view class="legend">
-      <view class="legend-item"><view class="dot temp-dot"></view> 温度 °C</view>
-      <view class="legend-item"><view class="dot hum-dot"></view> 湿度 %</view>
+  <!-- 统计卡片 -->
+  <view class="counts">
+    <view class="count-item high" bindtap="goDetail" data-id="">
+      <text class="count-num">{{counts.highTemp}}</text>
+      <text class="count-label">高温告警</text>
+    </view>
+    <view class="count-item low">
+      <text class="count-num">{{counts.lowTemp}}</text>
+      <text class="count-label">低温告警</text>
+    </view>
+    <view class="count-item warning">
+      <text class="count-num">{{counts.highHum + counts.lowHum}}</text>
+      <text class="count-label">湿度异常</text>
+    </view>
+    <view class="count-item offline">
+      <text class="count-num">{{counts.offline}}</text>
+      <text class="count-label">离线</text>
     </view>
   </view>
 
-  <!-- 最近记录 -->
-  <view class="table-box">
-    <text class="chart-title">最近记录</text>
-    <view class="table-header">
-      <text class="col col-wide">时间</text>
-      <text class="col">温度</text>
-      <text class="col">湿度</text>
+  <!-- 阈值条 -->
+  <view class="threshold-bar" wx:if="{{thresholds.temp_high != null}}">
+    <text>预警阈值: 温度 {{thresholds.temp_low}}~{{thresholds.temp_high}}°C | 湿度 {{thresholds.hum_low}}~{{thresholds.hum_high}}%</text>
+  </view>
+
+  <!-- 模式切换 -->
+  <view class="mode-toggle">
+    <view class="toggle-item {{mode === 'list' ? 'active' : ''}}"
+          bindtap="switchMode" data-mode="list">
+      <text>列表</text>
     </view>
-    <scroll-view scroll-y class="table-body">
-      <view class="table-row" wx:for="{{recentData}}" wx:key="index">
-        <text class="col col-wide">{{item.created_at}}</text>
-        <text class="col">{{item.temp}}°C</text>
-        <text class="col">{{item.hum}}%</text>
+    <view class="toggle-item {{mode === 'map' ? 'active' : ''}}"
+          bindtap="switchMode" data-mode="map">
+      <text>地图</text>
+    </view>
+  </view>
+
+  <!-- ========== 地图模式 ========== -->
+  <view class="map-wrap" wx:if="{{mode === 'map'}}">
+    <map
+      id="sensorMap"
+      latitude="{{centerLat}}"
+      longitude="{{centerLng}}"
+      scale="14"
+      markers="{{markers}}"
+      bindmarkertap="onMarkerTap"
+      style="width:100%;height:600rpx;border-radius:16rpx;"
+    ></map>
+    <view class="locate-btn" bindtap="moveToMyLocation">
+      <text class="locate-icon">◎</text>
+    </view>
+    <view class="map-hint">
+      <text>点击标记查看传感器详情</text>
+    </view>
+  </view>
+
+  <!-- ========== 列表模式 ========== -->
+  <view class="device-list" wx:if="{{mode === 'list'}}">
+    <view class="device-card {{item.status}}"
+          wx:for="{{allDevices}}" wx:key="device_id"
+          bindtap="goDetail" data-id="{{item.device_id}}">
+      <view class="card-dot">
+        <view class="dot {{item.status}}"></view>
       </view>
-    </scroll-view>
+      <view class="card-info">
+        <text class="card-id">{{item.displayName || item.device_id}}</text>
+        <text class="card-time">{{item.last_seen}}</text>
+      </view>
+      <view class="card-values" wx:if="{{item.status !== 'offline'}}">
+        <text class="val temp">{{item.temp != null ? item.temp.toFixed(1) + '°C' : '--'}}</text>
+        <text class="val hum">{{item.hum != null ? item.hum.toFixed(1) + '%' : '--'}}</text>
+      </view>
+      <view class="card-values" wx:else>
+        <text class="val offline">离线</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{allDevices.length === 0}}">
+      <text>暂无设备数据</text>
+    </view>
   </view>
 </view>

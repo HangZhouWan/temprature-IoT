@@ -2,212 +2,190 @@ const API = getApp().globalData.apiBase;
 
 Page({
   data: {
-    temp: "--",
-    hum: "--",
-    deviceCount: 0,
-    updateTime: "",
-    deviceList: [],
-    currentDevice: "",
-    hourOptions: ["1", "6", "24", "72", "168"],
-    currentHours: "24",
-    recentData: [],
+    mode: "list", // list | map
+    thresholds: {},
+    allDevices: [],
+    alerts: [],
+    counts: { highTemp: 0, lowTemp: 0, highHum: 0, lowHum: 0, offline: 0 },
+    markers: [],
+    centerLat: 39.9042,
+    centerLng: 116.4074,
   },
 
   onLoad() {
-    this.loadData();
+    this.refresh();
   },
 
   onShow() {
-    this.timer = setInterval(() => this.loadData(), 60000);
+    this.timer = setInterval(() => this.refresh(), 30000);
   },
 
   onHide() {
     clearInterval(this.timer);
   },
 
-  async loadData() {
-    const { currentDevice, currentHours } = this.data;
-    try {
-      const [latest, devices, history] = await Promise.all([
-        this.fetchLatest(),
-        this.fetchDevices(),
-        this.fetchHistory(currentDevice, currentHours),
-      ]);
+  refresh() {
+    Promise.all([this.fetchStatus(), this.fetchThresholds(), this.fetchNames()]).then(
+      ([devices, thresholds, names]) => {
+        devices.forEach((d) => {
+          d.displayName = names[d.device_id] || d.device_id;
+        });
+        this.setData({ thresholds, allDevices: devices });
+        this.buildAlerts(devices, thresholds);
+        this.buildMarkers(devices);
+      }
+    );
+  },
 
-      const d = latest.find(
-        (r) => !currentDevice || r.device_id === currentDevice
-      ) || latest[0] || {};
+  fetchStatus() {
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url: API + "/api/devices/status",
+        success: (res) => resolve(res.data || []),
+        fail: reject,
+      });
+    });
+  },
 
-      const deviceList = devices.map((d) => ({
-        name: d.device_id,
-        value: d.device_id,
-      }));
+  fetchThresholds() {
+    return new Promise((resolve) => {
+      wx.request({
+        url: API + "/api/thresholds",
+        success: (res) => resolve(res.data || {}),
+        fail: () => resolve({}),
+      });
+    });
+  },
 
+  fetchNames() {
+    return new Promise((resolve) => {
+      wx.request({
+        url: API + "/api/device-names",
+        success: (res) => resolve(res.data || {}),
+        fail: () => resolve({}),
+      });
+    });
+  },
+
+  buildAlerts(devices, thresholds) {
+    const counts = { highTemp: 0, lowTemp: 0, highHum: 0, lowHum: 0, offline: 0 };
+    const alerts = [];
+
+    devices.forEach((d) => {
+      if (d.status === "offline") {
+        counts.offline++;
+        alerts.push({ ...d, alertType: "offline", alertLabel: "离线", alertClass: "offline" });
+        return;
+      }
+      if (d.status === "warning") {
+        if (d.temp != null && thresholds.temp_high != null && d.temp > thresholds.temp_high) {
+          counts.highTemp++;
+          alerts.push({ ...d, alertType: "highTemp", alertLabel: "温度偏高", alertClass: "high" });
+        } else if (d.temp != null && thresholds.temp_low != null && d.temp < thresholds.temp_low) {
+          counts.lowTemp++;
+          alerts.push({ ...d, alertType: "lowTemp", alertLabel: "温度偏低", alertClass: "low" });
+        } else if (d.hum != null && thresholds.hum_high != null && d.hum > thresholds.hum_high) {
+          counts.highHum++;
+          alerts.push({ ...d, alertType: "highHum", alertLabel: "湿度过高", alertClass: "high" });
+        } else if (d.hum != null && thresholds.hum_low != null && d.hum < thresholds.hum_low) {
+          counts.lowHum++;
+          alerts.push({ ...d, alertType: "lowHum", alertLabel: "湿度过低", alertClass: "low" });
+        }
+      }
+    });
+
+    this.setData({ alerts, counts });
+  },
+
+  buildMarkers(devices) {
+    const markers = [];
+    const defaultLat = 39.9042;
+    const defaultLng = 116.4074;
+    let sumLat = 0, sumLng = 0, cnt = 0;
+
+    devices.forEach((d, idx) => {
+      // 没有坐标时散布在默认中心周围
+      const lat = (d.lat != null) ? d.lat : defaultLat + (idx * 0.003 - 0.012);
+      const lng = (d.lng != null) ? d.lng : defaultLng + (idx * 0.004 - 0.015);
+      sumLat += lat;
+      sumLng += lng;
+      cnt++;
+
+      const tempStr = d.temp != null ? d.temp.toFixed(1) + "°C" : "--";
+      const humStr = d.hum != null ? d.hum.toFixed(1) + "%" : "--";
+      const statusColor = d.status === "warning" ? "#ef4444" : d.status === "offline" ? "#94a3b8" : "#22c55e";
+
+      markers.push({
+        id: idx,
+        latitude: lat,
+        longitude: lng,
+        callout: {
+          content: (d.displayName || d.device_id) + "\n" + tempStr + "  " + humStr,
+          fontSize: 12,
+          borderRadius: 8,
+          padding: 8,
+          display: "BYCLICK",
+          bgColor: d.status === "warning" ? "#fff7ed" : d.status === "offline" ? "#f1f5f9" : "#f0fdf4",
+        },
+        label: {
+          content: d.temp != null ? d.temp.toFixed(1) + "°" : "?",
+          fontSize: 11,
+          color: "#ffffff",
+          bgColor: statusColor,
+          borderRadius: 10,
+          padding: 4,
+          anchorX: 0,
+          anchorY: -25,
+        },
+      });
+    });
+
+    if (cnt > 0) {
       this.setData({
-        temp: d.temp != null ? d.temp.toFixed(1) : "--",
-        hum: d.hum != null ? d.hum.toFixed(1) : "--",
-        deviceCount: devices.length,
-        updateTime: new Date().toLocaleTimeString(),
-        deviceList,
-        recentData: history.slice(-20).reverse(),
+        markers,
+        centerLat: sumLat / cnt,
+        centerLng: sumLng / cnt,
       });
-
-      this.drawChart(history);
-    } catch (e) {
-      console.error("加载失败:", e);
+    } else {
+      this.setData({ markers: [] });
     }
   },
 
-  fetchLatest() {
-    return new Promise((resolve, reject) => {
-      wx.request({
-        url: API + "/api/latest",
-        success: (res) => resolve(res.data),
-        fail: reject,
-      });
+  switchMode(e) {
+    this.setData({ mode: e.currentTarget.dataset.mode });
+  },
+
+  moveToMyLocation() {
+    wx.getLocation({
+      type: "gcj02",
+      success: (res) => {
+        this.setData({
+          centerLat: res.latitude,
+          centerLng: res.longitude,
+        });
+      },
+      fail: () => {
+        wx.showToast({ title: "获取位置失败", icon: "none" });
+      },
     });
   },
 
-  fetchDevices() {
-    return new Promise((resolve, reject) => {
-      wx.request({
-        url: API + "/api/devices",
-        success: (res) => resolve(res.data),
-        fail: reject,
-      });
-    });
-  },
-
-  fetchHistory(device, hours) {
-    let url = API + "/api/history?hours=" + hours;
-    if (device) url += "&device=" + device;
-    return new Promise((resolve, reject) => {
-      wx.request({
-        url,
-        success: (res) => resolve(res.data),
-        fail: reject,
-      });
-    });
-  },
-
-  onDeviceChange(e) {
-    const item = this.data.deviceList[e.detail.value];
-    this.setData({ currentDevice: item ? item.value : "" });
-    this.loadData();
-  },
-
-  onHoursChange(e) {
-    this.setData({ currentHours: this.data.hourOptions[e.detail.value] });
-    this.loadData();
-  },
-
-  // Canvas 2D 绘制温湿度折线图
-  drawChart(data) {
-    const query = wx.createSelectorQuery();
-    query
-      .select("#chartCanvas")
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0]) return;
-        const canvas = res[0].node;
-        const ctx = canvas.getContext("2d");
-        const dpr = wx.getSystemInfoSync().pixelRatio;
-        const w = res[0].width;
-        const h = res[0].height;
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        ctx.scale(dpr, dpr);
-
-        const pad = { top: 16, right: 20, bottom: 32, left: 48 };
-        const pw = w - pad.left - pad.right;
-        const ph = h - pad.top - pad.bottom;
-
-        // 背景
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(0, 0, w, h);
-
-        if (data.length < 2) {
-          ctx.fillStyle = "#94a3b8";
-          ctx.font = "14px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText("数据不足", w / 2, h / 2);
-          return;
-        }
-
-        const temps = data.map((r) => r.temp);
-        const hums = data.map((r) => r.hum);
-        const allVals = [...temps, ...hums].filter((v) => v != null);
-        if (allVals.length === 0) return;
-
-        const minVal = Math.floor(Math.min(...allVals) - 1);
-        const maxVal = Math.ceil(Math.max(...allVals) + 1);
-        const range = maxVal - minVal || 1;
-
-        const toX = (i) => pad.left + (i / (data.length - 1)) * pw;
-        const toY = (v) => pad.top + ph - ((v - minVal) / range) * ph;
-
-        // 网格
-        ctx.strokeStyle = "#334155";
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i <= 4; i++) {
-          const y = pad.top + (ph / 4) * i;
-          ctx.beginPath();
-          ctx.moveTo(pad.left, y);
-          ctx.lineTo(w - pad.right, y);
-          ctx.stroke();
-          ctx.fillStyle = "#94a3b8";
-          ctx.font = "10px sans-serif";
-          ctx.textAlign = "right";
-          ctx.fillText(
-            (maxVal - (range / 4) * i).toFixed(0),
-            pad.left - 8,
-            y + 3
-          );
-        }
-
-        // 湿度线
-        this.drawLine(ctx, hums, toX, toY, "#60a5fa");
-        // 温度线
-        this.drawLine(ctx, temps, toX, toY, "#f87171");
-
-        // X 轴标签
-        if (data.length > 0) {
-          ctx.fillStyle = "#94a3b8";
-          ctx.font = "10px sans-serif";
-          ctx.textAlign = "center";
-          const step = Math.max(1, Math.floor(data.length / 4));
-          for (let i = 0; i < data.length; i += step) {
-            const t = data[i].created_at || "";
-            const label = t.length > 16 ? t.slice(5, 16) : t;
-            ctx.fillText(label, toX(i), h - 4);
-          }
-        }
-      });
-  },
-
-  drawLine(ctx, values, toX, toY, color) {
-    const pts = [];
-    values.forEach((v, i) => {
-      if (v != null) pts.push({ x: toX(i), y: toY(v) });
-    });
-    if (pts.length < 2) return;
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) {
-      ctx.lineTo(pts[i].x, pts[i].y);
+  onMarkerTap(e) {
+    const marker = this.data.markers[e.detail.markerId];
+    if (marker) {
+      const device = this.data.allDevices[marker.id];
+      if (device) {
+        wx.navigateTo({ url: "/pages/detail/detail?device_id=" + device.device_id });
+      }
     }
-    ctx.stroke();
+  },
 
-    // 数据点
-    ctx.fillStyle = color;
-    pts.forEach((p) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    });
+  goDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: "/pages/detail/detail?device_id=" + id });
+  },
+
+  goSettings() {
+    wx.navigateTo({ url: "/pages/settings/settings" });
   },
 });

@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/devices/devices"
+    "pages/devices/devices",
+    "pages/detail/detail",
+    "pages/settings/settings"
   ],
   "window": {
     "navigationBarTitleText": "IoT 传感器",
@@ -17,17 +19,22 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "数据面板",
+        "text": "状态告警",
         "iconPath": "images/dashboard.png",
         "selectedIconPath": "images/dashboard-active.png"
       },
       {
         "pagePath": "pages/devices/devices",
-        "text": "设备监控",
+        "text": "传感器",
         "iconPath": "images/devices.png",
         "selectedIconPath": "images/devices-active.png"
       }
     ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于在地图上显示传感器的位置"
+    }
   },
   "sitemapLocation": "sitemap.json"
 }

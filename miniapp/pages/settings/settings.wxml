@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="section">
+    <text class="section-title">温度阈值</text>
+    <view class="form-row">
+      <view class="form-item">
+        <text class="form-label">高温预警 (°C)</text>
+        <input class="form-input" type="digit" value="{{temp_high}}" data-field="temp_high" bindinput="onInput" placeholder="如 35"/>
+      </view>
+      <view class="form-item">
+        <text class="form-label">低温预警 (°C)</text>
+        <input class="form-input" type="digit" value="{{temp_low}}" data-field="temp_low" bindinput="onInput" placeholder="如 5"/>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">湿度阈值</text>
+    <view class="form-row">
+      <view class="form-item">
+        <text class="form-label">高湿预警 (%)</text>
+        <input class="form-input" type="digit" value="{{hum_high}}" data-field="hum_high" bindinput="onInput" placeholder="如 80"/>
+      </view>
+      <view class="form-item">
+        <text class="form-label">低湿预警 (%)</text>
+        <input class="form-input" type="digit" value="{{hum_low}}" data-field="hum_low" bindinput="onInput" placeholder="如 20"/>
+      </view>
+    </view>
+  </view>
+
+  <view class="tip">
+    <text>当传感器温度或湿度超出设定范围时，将在告警页面显示预警。</text>
+  </view>
+
+  <button class="save-btn" bindtap="save">保存设置</button>
+</view>

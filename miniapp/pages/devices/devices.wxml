@@ -1,68 +1,30 @@
 <view class="container">
-  <!-- 统计概览 -->
-  <view class="summary">
-    <view class="sum-item online" bindtap="onFilter" data-status="online">
-      <text class="sum-num">{{counts.online}}</text>
-      <text class="sum-label">在线</text>
-    </view>
-    <view class="sum-item offline" bindtap="onFilter" data-status="offline">
-      <text class="sum-num">{{counts.offline}}</text>
-      <text class="sum-label">离线</text>
-    </view>
-    <view class="sum-item warning" bindtap="onFilter" data-status="warning">
-      <text class="sum-num">{{counts.warning}}</text>
-      <text class="sum-label">异常</text>
-    </view>
+  <view class="header">
+    <text class="title">传感器列表</text>
+    <text class="subtitle">{{devices.length}} 台设备</text>
   </view>
 
-  <!-- 筛选栏 -->
-  <view class="filter-bar">
-    <view class="filter-btn {{filter===''?'active':''}}" bindtap="onFilter" data-status="">全部</view>
-    <view class="filter-btn online-btn {{filter==='online'?'active':''}}" bindtap="onFilter" data-status="online">在线</view>
-    <view class="filter-btn offline-btn {{filter==='offline'?'active':''}}" bindtap="onFilter" data-status="offline">离线</view>
-    <view class="filter-btn warning-btn {{filter==='warning'?'active':''}}" bindtap="onFilter" data-status="warning">异常</view>
-    <view class="refresh-link" bindtap="loadDevices">刷新</view>
-  </view>
-
-  <!-- 设备列表 -->
   <view class="device-list">
-    <view class="device-card" wx:for="{{filteredDevices}}" wx:key="device_id">
-      <view class="device-top">
-        <view class="device-info">
-          <view class="device-id">
-            <view class="status-dot {{item.status}}"></view>
-            {{item.device_id}}
-          </view>
-          <text class="device-meta">{{item.total}} 条记录 | 最后上报: {{item.last_seen}}</text>
-        </view>
-        <view class="status-badge {{item.status}}">{{statusText[item.status]}}</view>
+    <view class="device-card" wx:for="{{devices}}" wx:key="device_id"
+          bindtap="goDetail" data-id="{{item.device_id}}">
+      <view class="card-left">
+        <view class="dot {{item.status}}"></view>
       </view>
-
-      <view class="device-data" wx:if="{{item.status !== 'offline'}}">
-        <view class="data-item">
-          <text class="data-label">温度</text>
-          <text class="data-value temp">{{item.tempStr}}</text>
-        </view>
-        <view class="data-item">
-          <text class="data-label">湿度</text>
-          <text class="data-value hum">{{item.humStr}}</text>
-        </view>
+      <view class="card-center">
+        <text class="device-id">{{item.displayName}}</text>
+        <text class="device-id-raw" wx:if="{{item.displayName !== item.device_id}}">{{item.device_id}}</text>
+        <text class="device-time">{{item.last_seen}}</text>
       </view>
-
-      <view class="device-alert" wx:if="{{item.status === 'warning'}}">
-        <text wx:if="{{item.temp > 50}}">⚠ 温度异常偏高 ({{item.tempStr}})</text>
-        <text wx:elif="{{item.temp < -20}}">⚠ 温度异常偏低 ({{item.tempStr}})</text>
-        <text wx:elif="{{item.hum > 90}}">⚠ 湿度过高 ({{item.humStr}})</text>
-        <text wx:elif="{{item.hum < 10}}">⚠ 湿度过低 ({{item.humStr}})</text>
-      </view>
-
-      <view class="device-alert offline-alert" wx:if="{{item.status === 'offline'}}">
-        <text>设备离线，超过 10 分钟未上报数据</text>
+      <view class="card-right">
+        <view class="val temp" wx:if="{{item.status !== 'offline'}}">{{item.tempStr}}</view>
+        <view class="val hum" wx:if="{{item.status !== 'offline'}}">{{item.humStr}}</view>
+        <view class="val offline" wx:else>离线</view>
+        <text class="arrow">></text>
       </view>
     </view>
 
-    <view class="empty" wx:if="{{filteredDevices.length === 0}}">
-      <text>{{filter ? '没有' + statusText[filter] + '设备' : '暂无设备数据'}}</text>
+    <view class="empty" wx:if="{{devices.length === 0}}">
+      <text>暂无设备数据</text>
     </view>
   </view>
 </view>
