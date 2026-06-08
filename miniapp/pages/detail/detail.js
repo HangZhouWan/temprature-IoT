@@ -40,15 +40,20 @@ Page({
       this.fetchName(),
     ]).then(([latest, history, name]) => {
       const d = latest[0] || {};
+      const formatted = history.map((r) => ({
+        ...r,
+        tempStr: r.temp != null ? r.temp.toFixed(1) + "°C" : "--",
+        humStr: r.hum != null ? r.hum.toFixed(1) + "%" : "--",
+      }));
       this.setData({
         displayName: name || deviceId,
         temp: d.temp != null ? d.temp.toFixed(1) : "--",
         hum: d.hum != null ? d.hum.toFixed(1) : "--",
         updateTime: d.created_at || new Date().toLocaleTimeString(),
-        history,
-        hasData: history.length > 0,
+        history: formatted,
+        hasData: formatted.length > 0,
       });
-      this.drawChart(history);
+      this.drawChart(formatted);
     });
   },
 

@@ -27,12 +27,15 @@ Page({
   refresh() {
     Promise.all([this.fetchStatus(), this.fetchThresholds(), this.fetchNames()]).then(
       ([devices, thresholds, names]) => {
-        devices.forEach((d) => {
-          d.displayName = names[d.device_id] || d.device_id;
-        });
-        this.setData({ thresholds, allDevices: devices });
-        this.buildAlerts(devices, thresholds);
-        this.buildMarkers(devices);
+        const formatted = devices.map((d) => ({
+          ...d,
+          displayName: names[d.device_id] || d.device_id,
+          tempStr: d.temp != null ? d.temp.toFixed(1) + "°C" : "--",
+          humStr: d.hum != null ? d.hum.toFixed(1) + "%" : "--",
+        }));
+        this.setData({ thresholds, allDevices: formatted });
+        this.buildAlerts(formatted, thresholds);
+        this.buildMarkers(formatted);
       }
     );
   },
