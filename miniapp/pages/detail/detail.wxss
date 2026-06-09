@@ -46,3 +46,14 @@
 .col-wide { flex: 2; text-align: left; }
 
 .empty { text-align: center; padding: 48rpx 0; color: #64748b; font-size: 26rpx; }
+
+.delete-section { margin-top: 32rpx; display: flex; justify-content: center; }
+.delete-btn {
+  background: transparent;
+  border: 2rpx solid #ef4444;
+  border-radius: 14rpx;
+  padding: 16rpx 48rpx;
+  font-size: 26rpx;
+  color: #ef4444;
+}
+.delete-btn:active { background: rgba(239, 68, 68, 0.1); }

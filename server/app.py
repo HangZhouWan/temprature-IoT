@@ -194,6 +194,20 @@ def set_device_name():
     return jsonify({"ok": True})
 
 
+@app.route("/api/device/delete", methods=["POST"])
+def delete_device():
+    """删除传感器及其所有数据"""
+    data = request.get_json(force=True)
+    device_id = data.get("device_id", "").strip()
+    if not device_id:
+        return jsonify({"ok": False, "error": "device_id required"}), 400
+    db = get_db()
+    db.execute("DELETE FROM readings WHERE device_id = ?", (device_id,))
+    db.execute("DELETE FROM device_names WHERE device_id = ?", (device_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/devices/status")
 def devices_status():
     """设备状态列表（含在线/离线/异常判定）"""
@@ -213,6 +227,9 @@ def devices_status():
         ORDER BY r.created_at DESC
     """).fetchall()
 
+    # 查询已有命名的设备（不在 device_names 中的就是新设备）
+    named = {r["device_id"] for r in db.execute("SELECT device_id FROM device_names").fetchall()}
+
     result = []
     for r in rows:
         d = dict(r)
@@ -225,6 +242,7 @@ def devices_status():
             d["status"] = "warning"
         else:
             d["status"] = "online"
+        d["is_new"] = d["device_id"] not in named
         result.append(d)
 
     return jsonify(result)

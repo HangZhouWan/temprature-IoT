@@ -40,8 +40,7 @@ Page({
       this.fetchName(),
     ]).then(([latest, history, name]) => {
       const d = latest[0] || {};
-      const formatted = history.map((r) => ({
-        ...r,
+      const formatted = history.map((r) => Object.assign({}, r, {
         tempStr: r.temp != null ? r.temp.toFixed(1) + "°C" : "--",
         humStr: r.hum != null ? r.hum.toFixed(1) + "%" : "--",
       }));
@@ -131,6 +130,32 @@ Page({
     });
   },
 
+  deleteDevice() {
+    var that = this;
+    wx.showModal({
+      title: "确认删除",
+      content: "将删除传感器 " + this.data.deviceId + " 的所有数据，此操作不可撤销。",
+      confirmText: "删除",
+      confirmColor: "#ef4444",
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.request({
+          url: API + "/api/device/delete",
+          method: "POST",
+          header: { "content-type": "application/json" },
+          data: { device_id: that.data.deviceId },
+          success: function () {
+            wx.showToast({ title: "已删除", icon: "success" });
+            setTimeout(function () { wx.navigateBack(); }, 1200);
+          },
+          fail: function () {
+            wx.showToast({ title: "删除失败", icon: "none" });
+          },
+        });
+      },
+    });
+  },
+
   drawChart(data) {
     const query = wx.createSelectorQuery();
     query
@@ -164,11 +189,11 @@ Page({
 
         const temps = data.map((r) => r.temp);
         const hums = data.map((r) => r.hum);
-        const allVals = [...temps, ...hums].filter((v) => v != null);
+        const allVals = temps.concat(hums).filter((v) => v != null);
         if (allVals.length === 0) return;
 
-        const minVal = Math.floor(Math.min(...allVals) - 1);
-        const maxVal = Math.ceil(Math.max(...allVals) + 1);
+        const minVal = Math.floor(Math.min.apply(null, allVals) - 1);
+        const maxVal = Math.ceil(Math.max.apply(null, allVals) + 1);
         const range = maxVal - minVal || 1;
 
         const toX = (i) => pad.left + (i / (data.length - 1)) * pw;

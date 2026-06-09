@@ -51,12 +51,19 @@
     <scroll-view scroll-y class="table-body">
       <view class="table-row" wx:for="{{history}}" wx:key="id">
         <text class="col col-wide">{{item.created_at}}</text>
-        <text class="col">{{item.temp != null ? item.temp.toFixed(1) + '°C' : '--'}}</text>
-        <text class="col">{{item.hum != null ? item.hum.toFixed(1) + '%' : '--'}}</text>
+        <text class="col">{{item.tempStr}}</text>
+        <text class="col">{{item.humStr}}</text>
       </view>
     </scroll-view>
     <view class="empty" wx:if="{{history.length === 0}}">
       <text>暂无数据</text>
+    </view>
+  </view>
+
+  <!-- 删除 -->
+  <view class="delete-section">
+    <view class="delete-btn" bindtap="deleteDevice">
+      <text>删除此传感器</text>
     </view>
   </view>
 </view>

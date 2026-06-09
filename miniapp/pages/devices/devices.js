@@ -34,12 +34,15 @@ Page({
         });
       }),
     ]).then(([list, names]) => {
-      const devices = list.map((d) => ({
-        ...d,
+      const devices = list.map((d) => Object.assign({}, d, {
         displayName: names[d.device_id] || d.device_id,
         tempStr: d.temp != null ? d.temp.toFixed(1) + "°C" : "--",
         humStr: d.hum != null ? d.hum.toFixed(1) + "%" : "--",
       }));
+      devices.sort(function(a, b) {
+        if (a.is_new !== b.is_new) return a.is_new ? -1 : 1;
+        return (b.last_seen || "").localeCompare(a.last_seen || "");
+      });
       this.setData({ devices });
     }).catch(() => {
       wx.showToast({ title: "加载失败", icon: "none" });

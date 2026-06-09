@@ -11,7 +11,10 @@
         <view class="dot {{item.status}}"></view>
       </view>
       <view class="card-center">
-        <text class="device-id">{{item.displayName}}</text>
+        <view class="name-row">
+          <text class="device-id">{{item.displayName}}</text>
+          <text class="new-badge" wx:if="{{item.is_new}}">NEW</text>
+        </view>
         <text class="device-id-raw" wx:if="{{item.displayName !== item.device_id}}">{{item.device_id}}</text>
         <text class="device-time">{{item.last_seen}}</text>
       </view>

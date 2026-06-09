@@ -5,6 +5,8 @@
     "pages/detail/detail",
     "pages/settings/settings"
   ],
+  "lazyCodeLoading": "requiredComponents",
+  "componentFramework": "glass-easel",
   "window": {
     "navigationBarTitleText": "IoT 传感器",
     "navigationBarBackgroundColor": "#1e293b",

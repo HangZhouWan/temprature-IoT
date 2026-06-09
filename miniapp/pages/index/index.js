@@ -27,12 +27,15 @@ Page({
   refresh() {
     Promise.all([this.fetchStatus(), this.fetchThresholds(), this.fetchNames()]).then(
       ([devices, thresholds, names]) => {
-        const formatted = devices.map((d) => ({
-          ...d,
+        const formatted = devices.map((d) => Object.assign({}, d, {
           displayName: names[d.device_id] || d.device_id,
           tempStr: d.temp != null ? d.temp.toFixed(1) + "°C" : "--",
           humStr: d.hum != null ? d.hum.toFixed(1) + "%" : "--",
         }));
+        formatted.sort(function(a, b) {
+          if (a.is_new !== b.is_new) return a.is_new ? -1 : 1;
+          return (b.last_seen || "").localeCompare(a.last_seen || "");
+        });
         this.setData({ thresholds, allDevices: formatted });
         this.buildAlerts(formatted, thresholds);
         this.buildMarkers(formatted);
@@ -77,22 +80,22 @@ Page({
     devices.forEach((d) => {
       if (d.status === "offline") {
         counts.offline++;
-        alerts.push({ ...d, alertType: "offline", alertLabel: "离线", alertClass: "offline" });
+        alerts.push(Object.assign({}, d, { alertType: "offline", alertLabel: "离线", alertClass: "offline" }));
         return;
       }
       if (d.status === "warning") {
         if (d.temp != null && thresholds.temp_high != null && d.temp > thresholds.temp_high) {
           counts.highTemp++;
-          alerts.push({ ...d, alertType: "highTemp", alertLabel: "温度偏高", alertClass: "high" });
+          alerts.push(Object.assign({}, d, { alertType: "highTemp", alertLabel: "温度偏高", alertClass: "high" }));
         } else if (d.temp != null && thresholds.temp_low != null && d.temp < thresholds.temp_low) {
           counts.lowTemp++;
-          alerts.push({ ...d, alertType: "lowTemp", alertLabel: "温度偏低", alertClass: "low" });
+          alerts.push(Object.assign({}, d, { alertType: "lowTemp", alertLabel: "温度偏低", alertClass: "low" }));
         } else if (d.hum != null && thresholds.hum_high != null && d.hum > thresholds.hum_high) {
           counts.highHum++;
-          alerts.push({ ...d, alertType: "highHum", alertLabel: "湿度过高", alertClass: "high" });
+          alerts.push(Object.assign({}, d, { alertType: "highHum", alertLabel: "湿度过高", alertClass: "high" }));
         } else if (d.hum != null && thresholds.hum_low != null && d.hum < thresholds.hum_low) {
           counts.lowHum++;
-          alerts.push({ ...d, alertType: "lowHum", alertLabel: "湿度过低", alertClass: "low" });
+          alerts.push(Object.assign({}, d, { alertType: "lowHum", alertLabel: "湿度过低", alertClass: "low" }));
         }
       }
     });
@@ -122,6 +125,8 @@ Page({
         id: idx,
         latitude: lat,
         longitude: lng,
+        width: 1,
+        height: 1,
         callout: {
           content: (d.displayName || d.device_id) + "\n" + tempStr + "  " + humStr,
           fontSize: 12,

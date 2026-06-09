@@ -18,10 +18,10 @@ Page({
       success: (res) => {
         const d = res.data || {};
         this.setData({
-          temp_high: String(d.temp_high ?? ""),
-          temp_low: String(d.temp_low ?? ""),
-          hum_high: String(d.hum_high ?? ""),
-          hum_low: String(d.hum_low ?? ""),
+          temp_high: d.temp_high != null ? String(d.temp_high) : "",
+          temp_low: d.temp_low != null ? String(d.temp_low) : "",
+          hum_high: d.hum_high != null ? String(d.hum_high) : "",
+          hum_low: d.hum_low != null ? String(d.hum_low) : "",
         });
       },
     });

@@ -72,12 +72,15 @@
         <view class="dot {{item.status}}"></view>
       </view>
       <view class="card-info">
-        <text class="card-id">{{item.displayName || item.device_id}}</text>
+        <view class="name-row">
+          <text class="card-id">{{item.displayName || item.device_id}}</text>
+          <text class="new-badge" wx:if="{{item.is_new}}">NEW</text>
+        </view>
         <text class="card-time">{{item.last_seen}}</text>
       </view>
       <view class="card-values" wx:if="{{item.status !== 'offline'}}">
-        <text class="val temp">{{item.temp != null ? item.temp.toFixed(1) + '°C' : '--'}}</text>
-        <text class="val hum">{{item.hum != null ? item.hum.toFixed(1) + '%' : '--'}}</text>
+        <text class="val temp">{{item.tempStr}}</text>
+        <text class="val hum">{{item.humStr}}</text>
       </view>
       <view class="card-values" wx:else>
         <text class="val offline">离线</text>

@@ -22,7 +22,17 @@
 @keyframes blink { 50% { opacity: 0.3; } }
 
 .card-center { flex: 1; }
-.device-id { font-size: 30rpx; font-weight: 600; display: block; }
+.name-row { display: flex; align-items: center; gap: 12rpx; }
+.device-id { font-size: 30rpx; font-weight: 600; }
+.new-badge {
+  font-size: 18rpx;
+  color: #ffffff;
+  background: #ef4444;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .device-id-raw { font-size: 20rpx; color: #64748b; display: block; }
 .device-time { font-size: 22rpx; color: #64748b; margin-top: 4rpx; display: block; }
 
