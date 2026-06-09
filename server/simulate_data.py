@@ -4,7 +4,7 @@ import random
 import math
 from datetime import datetime, timedelta
 
-API = "http://localhost:8081/api/data"
+API = "http://localhost:8080/api/data"
 
 # 10 个传感器，各有不同的温度和湿度基线
 # 有的正常、有的偏热、有的偏冷、有的偏湿
@@ -24,7 +24,7 @@ sensors = [
 ]
 
 # 先设置阈值，让部分传感器触发告警
-requests.post("http://localhost:8081/api/thresholds", json={
+requests.post("http://localhost:8080/api/thresholds", json={
     "temp_high": 30, "temp_low": 8,
     "hum_high": 80, "hum_low": 20
 })
@@ -32,7 +32,7 @@ print("阈值已设置: 温度 8°C~30°C, 湿度 20%~80%")
 
 # 设置自定义名称
 for s in sensors:
-    requests.post("http://localhost:8081/api/device-name", json={
+    requests.post("http://localhost:8080/api/device-name", json={
         "device_id": s["id"], "name": s["label"]
     })
 print("设备名称已设置")
@@ -75,7 +75,7 @@ print(f"\n完成! 共插入 {total} 条数据")
 
 # 验证
 print("\n=== 设备状态 ===")
-resp = requests.get("http://localhost:8081/api/devices/status").json()
+resp = requests.get("http://localhost:8080/api/devices/status").json()
 for d in resp:
     status_mark = {
         "online": "✓",
