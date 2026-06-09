@@ -131,7 +131,7 @@ Page({
           bgColor: d.status === "warning" ? "#fff7ed" : d.status === "offline" ? "#f1f5f9" : "#f0fdf4",
         },
         label: {
-          content: d.temp != null ? d.temp.toFixed(1) + "°" : "?",
+          content: (d.displayName || d.device_id) + " " + (d.temp != null ? d.temp.toFixed(1) + "°" : "?"),
           fontSize: 11,
           color: "#ffffff",
           bgColor: statusColor,
